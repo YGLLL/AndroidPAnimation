@@ -94,7 +94,6 @@ public class AndroidPAnimationView extends View {
                 invalidate();
                 break;
             case MotionEvent.ACTION_MOVE:
-
                 break;
         }
         return super.onTouchEvent(event);
