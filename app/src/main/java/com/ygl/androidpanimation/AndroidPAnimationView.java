@@ -5,6 +5,7 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 
@@ -12,10 +13,15 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
+import java.util.Timer;
+import java.util.TimerTask;
 
 public class AndroidPAnimationView extends View {
 
     public static final int MAX_CIRCLE_NUM=20;
+    public static final int MIN_CIRCLE_NUM=10;
+    public static final int MAX_COLOR_NUM=3;
+    public static final int MIN_COLOR_NUM=2;
 
     private Paint mPaint;
     private Random mRandom;
@@ -24,6 +30,7 @@ public class AndroidPAnimationView extends View {
     private int mDrawX;
     private int mDrawY;
     private List<CircleBean> mData=new ArrayList<>();
+    private int[] mColors;
 
     public AndroidPAnimationView(Context context) {
         super(context);
@@ -51,47 +58,65 @@ public class AndroidPAnimationView extends View {
     }
 
     private void initViewData() {
+
         mDrawW=getWidth()-getPaddingLeft()-getPaddingRight();
         mDrawH=getHeight()-getPaddingTop()-getPaddingBottom();
         mDrawX=mDrawW/2+getPaddingRight();
         mDrawY=mDrawH/2+getPaddingTop();
+
+        //初始化颜色
+        mColors=new int[getRandomColorNum()];
+        for (int i = 0; i < mColors.length; i++) {
+            mColors[i]=getRandomColor();
+        }
         getRandomData();
+        startMyAnimation();
     }
 
+    private Timer mTimer=new Timer();
+    private void startMyAnimation() {
+        TimerTask timerTask=new TimerTask() {
+            @Override
+            public void run() {
+                smallAnimation(1);
+                invalidate();
+            }
+        };
+
+        mTimer.schedule(timerTask,500,30);
+    }
+
+    private float mCircleGap=0;//半径差
     private void getRandomData() {
         mData.clear();
-        int r=Math.max(mDrawW,mDrawH)/2;
+        double r=Math.sqrt(mDrawW*mDrawW+mDrawH*mDrawH)/2;
         int circleNum=getRandomNum();
-        for (int i = circleNum; i > 0; i--) {
-            float theR=(((float)i)/((float)circleNum))*r;
+        mCircleGap=(float) r/circleNum;
+
+        //circleNum+1,多画一圈避免边角出现
+        for (int i = circleNum+1; i > 0; i--) {
             CircleBean bean=new CircleBean();
-            bean.setColor(getRandomColor());
-            bean.setRadius(theR);
+            bean.setColor(getCircleColor());
+            bean.setRadius(mCircleGap*i);
             mData.add(bean);
         }
     }
 
-    private int getRandomColor(){
-        int color=0xff000000;
-        byte[] bytes={0,0,0};
 
-        mRandom.nextBytes(bytes);
-        color |= ((bytes[0]&0xff)<<16);
-        color |= ((bytes[1]&0xff)<<8);
-        color |= (bytes[2]&0xff);
-        return color;
-    }
 
     private int getRandomNum(){
-        return mRandom.nextInt(MAX_CIRCLE_NUM);
+        int i=mRandom.nextInt(MAX_CIRCLE_NUM+1);
+        while (i<MIN_CIRCLE_NUM){
+            i=mRandom.nextInt(MAX_CIRCLE_NUM+1);
+        }
+        return i;
     }
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         switch (event.getAction()){
             case MotionEvent.ACTION_DOWN:
-                smallAnimation(5);
-                invalidate();
+                initViewData();
                 break;
             case MotionEvent.ACTION_MOVE:
                 break;
@@ -107,10 +132,45 @@ public class AndroidPAnimationView extends View {
             if (newR>0){
                 bean.setRadius(newR);
             }else {
-                mData.remove(bean);
+                iterator.remove();
+                float biggerR=mData.get(0).getRadius();
+                CircleBean circleBean=new CircleBean();
+                circleBean.setColor(getCircleColor());
+                circleBean.setRadius(biggerR+mCircleGap);
+                mData.add(0,circleBean);
             }
 
         }
+
+    }
+
+    private int mColorNum=0;
+    private int getCircleColor() {
+        mColorNum++;
+        if (mColorNum>=mColors.length){
+            mColorNum=0;
+        }
+        return mColors[mColorNum];
+    }
+    /**
+     * 颜色数
+     */
+    private int getRandomColorNum(){
+        int i=mRandom.nextInt(MAX_COLOR_NUM+1);
+        while (i<MIN_COLOR_NUM){
+            i=mRandom.nextInt(MAX_COLOR_NUM+1);
+        }
+        return i;
+    }
+    private int getRandomColor(){
+        int color=0xff000000;
+        byte[] bytes={0,0,0};
+
+        mRandom.nextBytes(bytes);
+        color |= ((bytes[0]&0xff)<<16);
+        color |= ((bytes[1]&0xff)<<8);
+        color |= (bytes[2]&0xff);
+        return color;
     }
 
     static class Test{
