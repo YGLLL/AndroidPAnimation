@@ -1,5 +1,6 @@
 package com.ygl.androidpanimation;
 
+import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -8,6 +9,7 @@ import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.animation.LinearInterpolator;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -49,6 +51,7 @@ public class AndroidPAnimationView extends View {
         if (isFirst){
             isFirst=false;
             initViewData();
+            startMyAnimation();
         }
         for (CircleBean mDatum : mData) {
             mPaint.setColor(mDatum.getColor());
@@ -57,8 +60,9 @@ public class AndroidPAnimationView extends View {
 
     }
 
+    private boolean isInitViewData=false;
     private void initViewData() {
-
+        isInitViewData=true;
         mDrawW=getWidth()-getPaddingLeft()-getPaddingRight();
         mDrawH=getHeight()-getPaddingTop()-getPaddingBottom();
         mDrawX=mDrawW/2+getPaddingRight();
@@ -70,33 +74,47 @@ public class AndroidPAnimationView extends View {
             mColors[i]=getRandomColor();
         }
         getRandomData();
-        startMyAnimation();
+        isInitViewData=false;
+
     }
 
+    private long mAnimationCount=0;
     private Timer mTimer=new Timer();
     private void startMyAnimation() {
         TimerTask timerTask=new TimerTask() {
             @Override
             public void run() {
-                smallAnimation(1);
-                invalidate();
+                if (!isInitViewData){
+                    mAnimationCount++;
+                    if (mAnimationCount<100){
+                        smallAnimation(3);
+
+                    }else {
+                        bigAnimation(3);
+                    }
+                    invalidate();
+                    if (mAnimationCount==200){
+                        mAnimationCount=0;
+                    }
+                }
             }
         };
 
-        mTimer.schedule(timerTask,500,30);
+        mTimer.schedule(timerTask,200,30);
     }
 
+    private double mCircleR=0;
     private float mCircleGap=0;//半径差
     private void getRandomData() {
         mData.clear();
-        double r=Math.sqrt(mDrawW*mDrawW+mDrawH*mDrawH)/2;
+        mCircleR=Math.sqrt(mDrawW*mDrawW+mDrawH*mDrawH)/2;
         int circleNum=getRandomNum();
-        mCircleGap=(float) r/circleNum;
+        mCircleGap=(float) mCircleR/circleNum;
 
         //circleNum+1,多画一圈避免边角出现
         for (int i = circleNum+1; i > 0; i--) {
             CircleBean bean=new CircleBean();
-            bean.setColor(getCircleColor());
+            bean.setColor(getCircleColor(true));
             bean.setRadius(mCircleGap*i);
             mData.add(bean);
         }
@@ -126,6 +144,7 @@ public class AndroidPAnimationView extends View {
 
     private void smallAnimation(int i){
         Iterator<CircleBean> iterator= mData.iterator();
+        boolean isHasRemove=false;
         while (iterator.hasNext()){
             CircleBean bean=iterator.next();
             float newR=bean.getRadius()-i;
@@ -133,22 +152,53 @@ public class AndroidPAnimationView extends View {
                 bean.setRadius(newR);
             }else {
                 iterator.remove();
-                float biggerR=mData.get(0).getRadius();
-                CircleBean circleBean=new CircleBean();
-                circleBean.setColor(getCircleColor());
-                circleBean.setRadius(biggerR+mCircleGap);
-                mData.add(0,circleBean);
+                isHasRemove=true;
             }
 
         }
 
+        if (isHasRemove){
+            float biggerR=mData.get(0).getRadius();
+            CircleBean circleBean=new CircleBean();
+            circleBean.setColor(getCircleColor(true));
+            circleBean.setRadius(biggerR+mCircleGap);
+            mData.add(0,circleBean);
+        }
+
+    }
+    private void bigAnimation(int i){
+        Iterator<CircleBean> iterator= mData.iterator();
+        boolean isHasRemove=false;
+        while (iterator.hasNext()){
+            CircleBean bean=iterator.next();
+            float newR=bean.getRadius()+i;
+            if (newR<(mCircleR+mCircleGap)){
+                bean.setRadius(newR);
+            }else {
+                iterator.remove();
+                isHasRemove=true;
+            }
+        }
+        if (isHasRemove){
+            CircleBean circleBean=new CircleBean();
+            circleBean.setColor(getCircleColor(false));
+            circleBean.setRadius(1);
+            mData.add(circleBean);
+        }
     }
 
     private int mColorNum=0;
-    private int getCircleColor() {
-        mColorNum++;
-        if (mColorNum>=mColors.length){
+    private int getCircleColor(boolean isToSmall) {
+        if (isToSmall){
+            mColorNum++;
+        }else {
+            mColorNum--;
+        }
+
+        if (mColorNum>(mColors.length-1)){
             mColorNum=0;
+        }else if (mColorNum<0){
+            mColorNum=mColors.length-1;
         }
         return mColors[mColorNum];
     }
