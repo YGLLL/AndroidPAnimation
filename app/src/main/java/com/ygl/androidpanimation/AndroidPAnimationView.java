@@ -186,6 +186,26 @@ public class AndroidPAnimationView extends View {
             mData.add(circleBean);
         }
     }
+    private void specialBigAnimation(int i){
+        Iterator<CircleBean> iterator= mData.iterator();
+        boolean isHasRemove=false;
+        while (iterator.hasNext()){
+            CircleBean bean=iterator.next();
+            float newR=bean.getRadius()+i;
+            if (newR<(mCircleR+mCircleGap)){
+                bean.setRadius(newR);
+            }else {
+                iterator.remove();
+                isHasRemove=true;
+            }
+        }
+        if (isHasRemove){
+            CircleBean circleBean=new CircleBean();
+            circleBean.setColor(getCircleColor(false));
+            circleBean.setRadius(1);
+            mData.add(circleBean);
+        }
+    }
 
     private int mColorNum=0;
     private int getCircleColor(boolean isToSmall) {
